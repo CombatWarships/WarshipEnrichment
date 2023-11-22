@@ -207,12 +207,12 @@ namespace WarshipImport.Managers
 
 			}
 
-			WarshipType = (await GetWarshipType())?.ID;
+			WarshipType = await GetWarshipType();
 			if (WarshipType == null)
 			{
 			}
 
-			Nationality = (await GetNationality())?.ID;
+			Nationality = await GetNationality();
 			if (Nationality == null)
 			{
 			}
@@ -278,7 +278,7 @@ namespace WarshipImport.Managers
 
 		public string? WarshipType { get; private set; }
 
-		private async Task<WarshipClassification?> GetWarshipType()
+		private async Task<string?> GetWarshipType()
 		{
 			var allLines = new List<string>();
 			if (_data.TryGetValue("type", out string[] lines))
@@ -287,7 +287,7 @@ namespace WarshipImport.Managers
 			if (_data.TryGetValue("classandtype", out lines))
 				allLines.AddRange(lines.Select(l => ConvertToText(l)));
 
-			return await _warshipClassification.Find(allLines);
+			return await _warshipClassification.FindKeyAsync(allLines);
 		}
 
 		public int? NumberInClass { get; private set; }
@@ -326,14 +326,12 @@ namespace WarshipImport.Managers
 		public int? Shafts { get; private set; }
 		public string? Nationality { get; private set; }
 
-		private async Task<Nationality?> GetNationality()
+		private async Task<string?> GetNationality()
 		{
 			if (!_data.TryGetValue("operators", out string[] value))
 				return null;
 
-			Nationality? nation = await _nationalityConverter.Find(value);
-
-			return nation;
+			return await _nationalityConverter.FindKeyAsync(value);
 		}
 
 		private void GetYear(out int? firstYear, out int? secondYear)

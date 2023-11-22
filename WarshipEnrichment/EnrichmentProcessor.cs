@@ -2,6 +2,8 @@
 using Serilog.Context;
 using System.Text.Json;
 using WarshipEnrichment.DTOs;
+using WarshipImport.Data;
+using WarshipImport.Interfaces;
 using WarshipImport.Managers;
 
 namespace WarshipEnrichment
@@ -9,7 +11,14 @@ namespace WarshipEnrichment
 
 	public class EnrichmentProcessor:IMessageProcessor
 	{
-		public EnrichmentProcessor() { }
+		private readonly IShipList _shipList;
+		private readonly IWikiShipFactory _wikiShipFactory;
+
+		public EnrichmentProcessor(IShipList shipList, IWikiShipFactory wikiShipFactory)
+		{
+			_shipList = shipList;
+			_wikiShipFactory = wikiShipFactory;
+		}
 
 		public async Task ProcessMessage(string message)
 		{
@@ -24,17 +33,52 @@ namespace WarshipEnrichment
 				}
 				Log.Information("Deserialized to Ship Identity");
 
+				var finalShip = new Ship();
+				bool isValidShip = true;
+				List<Task> tasks = new List<Task>();
+
 				if(shipIdentity.ShiplistKey != null) 
 				{
-				//var ircShip = 
+					var t =_shipList.FindShip(shipIdentity.ShiplistKey.Value).ContinueWith(res =>
+					{
+						var ircShip = res.Result;
+
+						if (ircShip != null)
+							isValidShip &= Merge(finalShip, ircShip);
+					});
+					tasks.Add(t);
 				}
 
+				if(shipIdentity.WikiLink != null) 
+				{
+					var t = _wikiShipFactory.Create(shipIdentity.WikiLink).ContinueWith(res =>
+					{
+						var wikiShip = res.Result;	
 
-				if(shipIdentity.WikiLink != null) { }
+						if (wikiShip != null)
+							isValidShip &= Merge(finalShip, wikiShip);
+					});
+					tasks.Add(t);
+				}
 
-				if(shipIdentity.ID != null) { }	
-				return;
+				if (shipIdentity.ID != null) { }
+
+				await Task.WhenAll(tasks);
+
+				if (isValidShip)
+				{
+					// publish ship.
+				}
+				else
+				{
+					// send to conflicted ships
+				}
 			}
+		}
+
+		private bool Merge(Ship finalShip, Ship enrichmentShip)
+		{
+			return true;
 		}
 	}
 }

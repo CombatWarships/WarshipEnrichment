@@ -4,7 +4,8 @@ namespace WarshipEnrichment.Interfaces
 {
     public interface IWarshipClassificationConverter
     {
-        Task<WarshipClassification?> Find(string text);
-        Task<WarshipClassification?> Find(IEnumerable<string> text);
+        string? FindKey(string text);
+
+        Task<string?> FindKeyAsync(IEnumerable<string> text);
     }
 }

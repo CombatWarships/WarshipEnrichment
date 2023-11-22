@@ -4,7 +4,7 @@ using WarshipRegistryAPI;
 
 namespace WarshipEnrichment.Converters
 {
-    public class WarshipClassificationConverter : FlatListConverter<WarshipClassification>, IWarshipClassificationConverter
+	public class WarshipClassificationConverter : FlatListConverter<WarshipClassification>, IWarshipClassificationConverter
 	{
 		private readonly IWarshipClassificationAPI _warshipClassificationAPI;
 
@@ -13,9 +13,16 @@ namespace WarshipEnrichment.Converters
 			_warshipClassificationAPI = warshipClassificationAPI;
 		}	
 
-		public Task<WarshipClassification?> Find(string text)
+		public string? FindKey(string text)
 		{
-			return Find(new string[] { text });
+			var shipClass = Find(new string[] { text }).Result;
+
+			return shipClass?.ID;
+		}
+
+		public async Task<string?> FindKeyAsync(IEnumerable<string> text)
+		{
+			return (await Find(text))?.ID;
 		}
 
 		protected override IEnumerable<string> AliasSelector(WarshipClassification type)

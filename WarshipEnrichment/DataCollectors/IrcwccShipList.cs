@@ -6,7 +6,7 @@ using WarshipEnrichment.Interfaces;
 using WarshipImport.Data;
 using WarshipImport.Interfaces;
 
-namespace WarshipImport.Managers
+namespace WarshipEnrichment.DataCollectors
 {
 
 	public class IrcwccShipList : IShipList
@@ -20,6 +20,12 @@ namespace WarshipImport.Managers
 		{
 			_warshipClassification = warshipClassification;
 			_nationalityConverter = nationalityConverter;
+		}
+
+		public async Task<Ship?> FindShip(int shipListKey)
+		{
+			var shiplist = await GetShips();
+			return shiplist.FirstOrDefault(s => s.ShiplistKey == shipListKey);
 		}
 
 		public async Task<List<Ship>> GetShips()
@@ -51,16 +57,16 @@ namespace WarshipImport.Managers
 				return new List<Ship>(); ;
 			}
 
-				var mapperConfig = new MapperConfiguration(cfg =>
-			cfg.CreateMap<IrcwccShip, Ship>()
-				  .ForMember(dest => dest.SpeedIrcwcc, opt => opt.MapFrom(src => src.Speed))
-				  .ForMember(dest => dest.LengthFt, opt => opt.MapFrom(src => src.Loa))
-				  .ForMember(dest => dest.BeamFt, opt => opt.MapFrom(src => src.Beam))
-				  .ForMember(dest => dest.ClassType, opt => opt.MapFrom(src => _warshipClassification.Find(src.ClassType)))
-				  .ForMember(dest => dest.Nation, opt => opt.MapFrom(src => _nationalityConverter.Find(new string[] { src.Nation })))
-				  .ForMember(dest => dest.Launched, opt => opt.MapFrom(src => FindFirstYear(src.Launched)))
-				  .ForMember(dest => dest.LastYearBuilt, opt => opt.MapFrom(src => FindFirstYear(src.Completed) ?? FindSecondYear(src.Launched)))
-			);
+			var mapperConfig = new MapperConfiguration(cfg =>
+		cfg.CreateMap<IrcwccShip, Ship>()
+			  .ForMember(dest => dest.SpeedIrcwcc, opt => opt.MapFrom(src => src.Speed))
+			  .ForMember(dest => dest.LengthFt, opt => opt.MapFrom(src => src.Loa))
+			  .ForMember(dest => dest.BeamFt, opt => opt.MapFrom(src => src.Beam))
+			  .ForMember(dest => dest.ClassType, opt => opt.MapFrom(src => _warshipClassification.FindKey(src.ClassType)))
+			  .ForMember(dest => dest.Nation, opt => opt.MapFrom(src => _nationalityConverter.FindKey(new string[] { src.Nation })))
+			  .ForMember(dest => dest.Launched, opt => opt.MapFrom(src => FindFirstYear(src.Launched)))
+			  .ForMember(dest => dest.LastYearBuilt, opt => opt.MapFrom(src => FindFirstYear(src.Completed) ?? FindSecondYear(src.Launched)))
+		);
 
 			var mapper = mapperConfig.CreateMapper();
 

@@ -35,5 +35,15 @@ namespace WarshipEnrichment.Converters
 		{
 			return _nationalityAPI.GetAll();
 		}
+
+		public string? FindKey(IEnumerable<string> text)
+		{
+			return Find(text).Result?.ID;
+		}
+
+		public async Task<string?> FindKeyAsync(IEnumerable<string> text)
+		{
+			return (await Find(text))?.ID;
+		}
 	}
 }

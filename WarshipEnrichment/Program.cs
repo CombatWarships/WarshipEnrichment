@@ -5,10 +5,16 @@ using Serilog;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 using WarshipEnrichment;
 using WarshipEnrichment.Converters;
+using WarshipEnrichment.DataCollectors;
 using WarshipEnrichment.Interfaces;
 using WarshipImport.Interfaces;
 using WarshipImport.Managers;
 using WarshipRegistryAPI;
+
+
+await Task.Delay(5000);
+
+
 
 var appInsightsConnection = "InstrumentationKey=09ce9924-198e-4315-b6c8-7885f28ec8e9;IngestionEndpoint=https://southcentralus-3.in.applicationinsights.azure.com/;LiveEndpoint=https://southcentralus.livediagnostics.monitor.azure.com/";
 
@@ -31,11 +37,11 @@ builder.ConfigureServices(services =>
 {
 	services.AddSingleton<IWarshipClassificationAPI, WarshipClassificationAPI>((sp) =>
 	{
-		return new WarshipClassificationAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("WarshipRegistryUrl")!);
+		return new WarshipClassificationAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("ClassificationAPI")!);
 	});
 	services.AddSingleton<INationalityAPI, NationalityAPI>((sp) =>
 	{
-		return new NationalityAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("WarshipRegistryUrl")!);
+		return new NationalityAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("NationalityAPI")!);
 	});
 
 	services.AddSingleton<IShipList, IrcwccShipList>();

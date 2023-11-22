@@ -11,7 +11,7 @@
 		protected abstract IEnumerable<string> AliasSelector(T item);
 
 
-		public async Task<T?> Find(IEnumerable<string> text)
+		protected async Task<T?> Find(IEnumerable<string> text)
 		{
 			var lookup = await GetLookup();
 
@@ -29,7 +29,6 @@
 
 			return operators.OrderBy(TierSelector).FirstOrDefault();
 		}
-
 
 		private async Task<List<Tuple<string, T>>> GetLookup()
 		{

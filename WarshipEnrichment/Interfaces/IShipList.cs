@@ -4,6 +4,7 @@ namespace WarshipImport.Interfaces
 {
     public interface IShipList
     {
-        Task<List<Ship>> GetShips();
+		Task<Ship?> FindShip(int shipListKey);
+		Task<List<Ship>> GetShips();
     }
 }

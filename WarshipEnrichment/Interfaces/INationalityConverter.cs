@@ -3,7 +3,8 @@
 namespace WarshipEnrichment.Interfaces
 {
     public interface INationalityConverter
-    {
-        Task<Nationality?> Find(IEnumerable<string> text);
-    }
+	{
+		string? FindKey(IEnumerable<string> text);
+		Task<string?> FindKeyAsync(IEnumerable<string> text);
+	}
 }
