@@ -2,7 +2,10 @@
 
 namespace WarshipEnrichment
 {
-	public sealed class ServiceBusConsumer : IDisposable
+
+
+
+	public sealed class ServiceBusConsumer : IDisposable, IServiceBusConsumer
 	{
 		private readonly ServiceBusClient _client;
 		private readonly ServiceBusProcessor _processor;
@@ -14,7 +17,7 @@ namespace WarshipEnrichment
 		{
 			if (string.IsNullOrEmpty(connectionString))
 				throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
-			
+
 			_messageProcessor = messageProcessor ?? throw new ArgumentNullException(nameof(messageProcessor));
 
 

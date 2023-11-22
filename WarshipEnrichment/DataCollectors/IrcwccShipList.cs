@@ -4,6 +4,7 @@ using System.Text.Json;
 using WarshipEnrichment.Converters;
 using WarshipImport.Data;
 using WarshipImport.Interfaces;
+using WarshipRegistryAPI;
 
 namespace WarshipImport.Managers
 {
@@ -11,14 +12,15 @@ namespace WarshipImport.Managers
 	public class IrcwccShipList : IShipList
 	{
 		private readonly HttpClient _client = new HttpClient();
-		private readonly IWarshipClassificationDB _warshipClassificationDB;
+		private readonly IWarshipClassificationAPI _warshipClassificationDB;
+		private readonly INationalityConverter _nationalityConverter;
 		private List<Ship>? _ships;
 
-		public IrcwccShipList(IWarshipClassificationDB warshipClassificationDB)
+		public IrcwccShipList(IWarshipClassificationAPI warshipClassificationDB, INationalityConverter nationalityConverter)
 		{
 			_warshipClassificationDB = warshipClassificationDB;
+			_nationalityConverter = nationalityConverter;
 		}
-
 
 		public async Task<List<Ship>> GetShips()
 		{
@@ -55,7 +57,7 @@ namespace WarshipImport.Managers
 				  .ForMember(dest => dest.LengthFt, opt => opt.MapFrom(src => src.Loa))
 				  .ForMember(dest => dest.BeamFt, opt => opt.MapFrom(src => src.Beam))
 				  .ForMember(dest => dest.ClassType, opt => opt.MapFrom(src => _warshipClassificationDB.FindWarshipType(src.ClassType)))
-				  .ForMember(dest => dest.Nation, opt => opt.MapFrom(src => NationalityConverter.FindNationality(new string[] { src.Nation })))
+				  .ForMember(dest => dest.Nation, opt => opt.MapFrom(src => _nationalityConverter.FindNationality(new string[] { src.Nation })))
 				  .ForMember(dest => dest.Launched, opt => opt.MapFrom(src => FindFirstYear(src.Launched)))
 				  .ForMember(dest => dest.LastYearBuilt, opt => opt.MapFrom(src => FindFirstYear(src.Completed) ?? FindSecondYear(src.Launched)))
 			);

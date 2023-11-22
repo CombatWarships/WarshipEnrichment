@@ -1,13 +1,14 @@
 ﻿using WarshipImport.Data;
 using WarshipImport.Interfaces;
+using WarshipRegistryAPI;
 
 namespace WarshipImport.Managers
 {
 	public class WikiShipFactory : IWikiShipFactory
 	{
-		private readonly IWarshipClassificationDB _warshipClassificationDB;
+		private readonly IWarshipClassificationAPI _warshipClassificationDB;
 
-		public WikiShipFactory(IWarshipClassificationDB warshipClassificationDB)
+		public WikiShipFactory(IWarshipClassificationAPI warshipClassificationDB)
 		{
 			_warshipClassificationDB = warshipClassificationDB;
 		}

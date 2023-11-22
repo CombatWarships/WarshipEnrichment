@@ -3,7 +3,7 @@ using WarshipRegistryAPI;
 
 namespace WarshipEnrichment.Converters
 {
-	public class NationalityConverter
+	public class NationalityConverter : INationalityConverter
 	{
 		private readonly INationalityAPI _nationalityAPI;
 		private List<Tuple<string, Nationality>>? _nationLookup;

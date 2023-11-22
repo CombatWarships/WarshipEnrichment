@@ -2,19 +2,18 @@
 using Serilog;
 using Serilog.Context;
 using WarshipEnrichment.Converters;
-using WarshipImport.Data;
-using WarshipImport.Interfaces;
+using WarshipRegistryAPI;
 
 namespace WarshipImport.Managers
 {
-    public class WikiDataAnalyzer
+	public class WikiDataAnalyzer
 	{
 		private const string _wikiImageBaseUrl = "//upload.wikimedia.org/wikipedia/commons/thumb/";
 
 		private Dictionary<string, string[]> _data = new Dictionary<string, string[]>();
-		private readonly IWarshipClassificationDB _warshipClassificationDB;
+		private readonly IWarshipClassificationAPI _warshipClassificationDB;
 
-		public WikiDataAnalyzer(IWarshipClassificationDB warshipClassificationDB)
+		public WikiDataAnalyzer(IWarshipClassificationAPI warshipClassificationDB)
 		{
 			_warshipClassificationDB = warshipClassificationDB;
 		}
