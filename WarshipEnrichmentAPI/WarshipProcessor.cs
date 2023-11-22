@@ -21,7 +21,12 @@ namespace WarshipEnrichmentAPI
 			_sender = _client.CreateSender("WarshipEnrichment");
 		}
 
-		public async Task PostWarships(IEnumerable<IShip> ships)
+		public async Task PostWarship(IShipIdentity ship)
+		{
+			await PostWarships(new List<IShipIdentity>() { ship });
+		}
+
+		public async Task PostWarships(IEnumerable<IShipIdentity> ships)
 		{
 			// create a batch 
 			ServiceBusMessageBatch messageBatch = await _sender.CreateMessageBatchAsync();

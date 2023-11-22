@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WarshipEnrichment": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

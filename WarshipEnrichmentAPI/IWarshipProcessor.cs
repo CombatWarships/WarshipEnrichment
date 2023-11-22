@@ -2,6 +2,7 @@
 {
 	public interface IWarshipProcessor
 	{
-		Task PostWarships(IEnumerable<IShip> ships);
+		Task PostWarship(IShipIdentity ship);
+		Task PostWarships(IEnumerable<IShipIdentity> ships);
 	}
 }
