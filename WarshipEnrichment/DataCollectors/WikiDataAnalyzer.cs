@@ -2,6 +2,7 @@
 using Serilog;
 using Serilog.Context;
 using WarshipEnrichment.Converters;
+using WarshipEnrichment.Interfaces;
 using WarshipRegistryAPI;
 
 namespace WarshipImport.Managers
@@ -11,11 +12,13 @@ namespace WarshipImport.Managers
 		private const string _wikiImageBaseUrl = "//upload.wikimedia.org/wikipedia/commons/thumb/";
 
 		private Dictionary<string, string[]> _data = new Dictionary<string, string[]>();
-		private readonly IWarshipClassificationAPI _warshipClassificationDB;
+		private readonly INationalityConverter _nationalityConverter;
+		private readonly IWarshipClassificationConverter _warshipClassification;
 
-		public WikiDataAnalyzer(IWarshipClassificationAPI warshipClassificationDB)
+		public WikiDataAnalyzer(INationalityConverter nationalityConverter, IWarshipClassificationConverter warshipClassification)
 		{
-			_warshipClassificationDB = warshipClassificationDB;
+			_nationalityConverter = nationalityConverter;
+			_warshipClassification = warshipClassification;
 		}
 
 		public string Url { get; private set; }
@@ -29,7 +32,7 @@ namespace WarshipImport.Managers
 
 				_data = await Extract(url);
 
-				bool isValid = ProcessShip();
+				bool isValid = await ProcessShip();
 
 				Log.Information($"Ship data is {isValid}");
 				return isValid;
@@ -189,7 +192,7 @@ namespace WarshipImport.Managers
 		}
 
 
-		private bool ProcessShip()
+		private async Task<bool> ProcessShip()
 		{
 			if (!HasData)
 			{
@@ -204,12 +207,15 @@ namespace WarshipImport.Managers
 
 			}
 
-			WarshipType = GetWarshipType();
+			WarshipType = (await GetWarshipType())?.ID;
 			if (WarshipType == null)
 			{
 			}
 
-			Nationality = GetNationality();
+			Nationality = (await GetNationality())?.ID;
+			if (Nationality == null)
+			{
+			}
 
 			Speed = GetValue("speed", RegExHelper.FindKnots);
 			if (NotInRange(Speed, 0, 60))
@@ -272,7 +278,7 @@ namespace WarshipImport.Managers
 
 		public string? WarshipType { get; private set; }
 
-		private string? GetWarshipType()
+		private async Task<WarshipClassification?> GetWarshipType()
 		{
 			var allLines = new List<string>();
 			if (_data.TryGetValue("type", out string[] lines))
@@ -281,7 +287,7 @@ namespace WarshipImport.Managers
 			if (_data.TryGetValue("classandtype", out lines))
 				allLines.AddRange(lines.Select(l => ConvertToText(l)));
 
-			return _warshipClassificationDB.FindWarshipType(allLines);
+			return await _warshipClassification.Find(allLines);
 		}
 
 		public int? NumberInClass { get; private set; }
@@ -318,19 +324,16 @@ namespace WarshipImport.Managers
 		internal int? GunCaliber { get; private set; }
 		public int? Rudders { get; private set; }
 		public int? Shafts { get; private set; }
-		public string Nationality { get; private set; }
+		public string? Nationality { get; private set; }
 
-		private string GetNationality()
+		private async Task<Nationality?> GetNationality()
 		{
 			if (!_data.TryGetValue("operators", out string[] value))
 				return null;
 
-			var nation = NationalityConverter.FindNationality(value);
+			Nationality? nation = await _nationalityConverter.Find(value);
 
-			if (nation == Data.Nationality.Unknown)
-				return null;
-
-			return nation.ToString();
+			return nation;
 		}
 
 		private void GetYear(out int? firstYear, out int? secondYear)

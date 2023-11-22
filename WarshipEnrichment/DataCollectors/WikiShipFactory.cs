@@ -1,21 +1,23 @@
-﻿using WarshipImport.Data;
+﻿using WarshipEnrichment.Interfaces;
+using WarshipImport.Data;
 using WarshipImport.Interfaces;
-using WarshipRegistryAPI;
 
 namespace WarshipImport.Managers
 {
 	public class WikiShipFactory : IWikiShipFactory
 	{
-		private readonly IWarshipClassificationAPI _warshipClassificationDB;
+		private readonly INationalityConverter _nationalityConverter;
+		private readonly IWarshipClassificationConverter _warshipClassification;
 
-		public WikiShipFactory(IWarshipClassificationAPI warshipClassificationDB)
+		public WikiShipFactory(INationalityConverter nationalityConverter, IWarshipClassificationConverter warshipClassification)
 		{
-			_warshipClassificationDB = warshipClassificationDB;
+			_nationalityConverter = nationalityConverter;
+			_warshipClassification = warshipClassification;
 		}
 
 		public async Task<Ship> Create(string url)
 		{
-			var analyzer = new WikiDataAnalyzer(_warshipClassificationDB);
+			var analyzer = new WikiDataAnalyzer(_nationalityConverter, _warshipClassification);
 
 			var validShip = await analyzer.Load(url);
 

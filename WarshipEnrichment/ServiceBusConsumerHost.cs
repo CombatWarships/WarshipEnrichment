@@ -1,25 +1,30 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace WarshipEnrichment
 {
+	public interface IMessageProcessor
+	{
+		Task ProcessMessage(string message);
+	}
 
-
-
-	public sealed class ServiceBusConsumer : IDisposable, IServiceBusConsumer
+	public sealed class ServiceBusConsumerHost : IHostedService
 	{
 		private readonly ServiceBusClient _client;
 		private readonly ServiceBusProcessor _processor;
 
 		private readonly TaskCompletionSource _isRunning = new TaskCompletionSource();
-		private readonly Func<string, Task> _messageProcessor;
+		private readonly IMessageProcessor _messageProcessor;
 
-		public ServiceBusConsumer(string connectionString, Func<string, Task> messageProcessor)
+		public ServiceBusConsumerHost(IConfiguration configuration, IMessageProcessor messageProcessor)
 		{
+			string? connectionString = configuration.GetConnectionString("EnrichmentServiceBus");
+
 			if (string.IsNullOrEmpty(connectionString))
 				throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
 
 			_messageProcessor = messageProcessor ?? throw new ArgumentNullException(nameof(messageProcessor));
-
 
 			var clientOptions = new ServiceBusClientOptions()
 			{
@@ -29,7 +34,8 @@ namespace WarshipEnrichment
 			_processor = _client.CreateProcessor("WarshipEnrichment", new ServiceBusProcessorOptions());
 		}
 
-		public async Task Run()
+
+		async Task IHostedService.StartAsync(CancellationToken cancellationToken)
 		{
 			// add handler to process messages
 			_processor.ProcessMessageAsync += MessageHandler;
@@ -43,13 +49,31 @@ namespace WarshipEnrichment
 			await _isRunning.Task;
 		}
 
+		async Task IHostedService.StopAsync(CancellationToken cancellationToken)
+		{
+			try
+			{
+				Console.WriteLine("\nStopping the receiver...");
+				_processor.StopProcessingAsync().Wait();
+				Console.WriteLine("Stopped receiving messages");
+			}
+			finally
+			{
+				await _processor.DisposeAsync();
+				await _client.DisposeAsync();
+
+				_isRunning.SetResult();
+			}
+		}
+
+
 		// handle received messages
 		private async Task MessageHandler(ProcessMessageEventArgs args)
 		{
 			string body = args.Message.Body.ToString();
 			Console.WriteLine($"Received: {body}");
 
-			await _messageProcessor.Invoke(body);
+			await _messageProcessor.ProcessMessage(body);
 
 			// complete the message. message is deleted from the queue. 
 			await args.CompleteMessageAsync(args.Message);
@@ -61,23 +85,6 @@ namespace WarshipEnrichment
 			// TODO: Add Logger
 			Console.WriteLine(args.Exception.ToString());
 			return Task.CompletedTask;
-		}
-
-		void IDisposable.Dispose()
-		{
-			try
-			{
-				Console.WriteLine("\nStopping the receiver...");
-				_processor.StopProcessingAsync().Wait();
-				Console.WriteLine("Stopped receiving messages");
-			}
-			finally
-			{
-				_processor.DisposeAsync().GetAwaiter().GetResult();
-				_client.DisposeAsync().GetAwaiter().GetResult();
-
-				_isRunning.SetResult();
-			}
 		}
 	}
 }

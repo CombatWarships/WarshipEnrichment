@@ -1,67 +1,39 @@
 ﻿using System.Text.Json;
+using WarshipEnrichment.Interfaces;
 using WarshipRegistryAPI;
 
 namespace WarshipEnrichment.Converters
 {
-	public class NationalityConverter : INationalityConverter
+    public class NationalityConverter : FlatListConverter<Nationality>, INationalityConverter
 	{
-		private readonly INationalityAPI _nationalityAPI;
-		private List<Tuple<string, Nationality>>? _nationLookup;
+		private INationalityAPI _nationalityAPI;
 
 		public NationalityConverter(INationalityAPI nationalityAPI)
 		{
 			_nationalityAPI = nationalityAPI;
 		}
+	
+	protected override object TierSelector(Nationality nation) => nation.Tier;
 
-		public async Task<Nationality?> FindNationality(string[] html)
+		protected override IEnumerable<string> AliasSelector(Nationality nation)
 		{
-			var nationLookup = await GetNationLookup();
+			yield return nation.ID.ToLowerInvariant();
+			yield return nation.DisplayName.ToLowerInvariant();
 
-			List<Nationality> operators = new List<Nationality>();
-			foreach (var line in html)
+			if (!string.IsNullOrEmpty(nation.Aliases))
 			{
-				foreach (var kvp in nationLookup)
+				var aliases = JsonSerializer.Deserialize<string[]>(nation.Aliases);
+				if (aliases != null)
 				{
-					if (line.Contains(kvp.Item1, StringComparison.OrdinalIgnoreCase))
-					{
-						operators.Add(kvp.Item2);
-					}
+					foreach (var alias in aliases)
+						yield return alias;
 				}
 			}
-
-			return operators.OrderBy(x => x.Tier).FirstOrDefault();
 		}
 
-		private async Task<List<Tuple<string, Nationality>>> GetNationLookup()
+		protected override Task<IEnumerable<Nationality>> GetDataSource()
 		{
-			if (_nationLookup == null)
-			{
-				var nations = await _nationalityAPI.GetAll();
-				if (nations?.Count() > 0)
-				{
-					var nationLookup = new List<Tuple<string, Nationality>>();
-
-					foreach (var nation in nations)
-					{
-						nationLookup.Add(Tuple.Create(nation.ID.ToLowerInvariant(), nation));
-						nationLookup.Add(Tuple.Create(nation.DisplayName.ToLowerInvariant(), nation));
-
-						if (!string.IsNullOrEmpty(nation.Aliases))
-						{
-							var aliases = JsonSerializer.Deserialize<string[]>(nation.Aliases);
-							if (aliases != null)
-							{
-								foreach (var alias in aliases)
-									nationLookup.Add(Tuple.Create(alias.ToLowerInvariant(), nation));
-							}
-						}
-					}
-
-					_nationLookup = nationLookup;
-				}
-			}
-
-			return _nationLookup ?? new List<Tuple<string, Nationality>>();
+			return _nationalityAPI.GetAll();
 		}
 	}
 }

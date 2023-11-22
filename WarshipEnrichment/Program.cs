@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 using WarshipEnrichment;
 using WarshipEnrichment.Converters;
+using WarshipEnrichment.Interfaces;
 using WarshipImport.Interfaces;
 using WarshipImport.Managers;
 using WarshipRegistryAPI;
@@ -26,9 +27,6 @@ Log.Information("Application started & Logger attached");
 
 var builder = Host.CreateDefaultBuilder();
 
-var connectionString = "Endpoint=sb://warshipservicebus.servicebus.windows.net/;SharedAccessKeyName=ListenPolicy;SharedAccessKey=vr3DMhgdaFTSzw5H5YUi4Oi4pJ5MQnvmM+ASbPYFd4g=;EntityPath=warshipenrichment";
-
-
 builder.ConfigureServices(services =>
 {
 	services.AddSingleton<IWarshipClassificationAPI, WarshipClassificationAPI>((sp) =>
@@ -43,13 +41,11 @@ builder.ConfigureServices(services =>
 	services.AddSingleton<IShipList, IrcwccShipList>();
 	services.AddSingleton<IWikiShipFactory, WikiShipFactory>();
 	services.AddSingleton<INationalityConverter, NationalityConverter>();
+	services.AddSingleton<IWarshipClassificationConverter, WarshipClassificationConverter>();
+	services.AddScoped<IMessageProcessor, EnrichmentProcessor>();
 
-	services.AddSingleton<IServiceBusConsumer, ServiceBusConsumer>((sp) =>
-	{
-		return new ServiceBusConsumer(sp.GetRequiredService<IConfiguration>().GetConnectionString("EnrichmentServiceBus")!, new EnrichmentProcessor().ProcessMessage);
-	});
+	services.AddHostedService<ServiceBusConsumerHost>();
 });
 
-var app = builder.Build();
-var consumer = app.Services.GetRequiredService<IServiceBusConsumer>();
-await consumer.Run();
+IHost app = builder.Build();
+app.Start();

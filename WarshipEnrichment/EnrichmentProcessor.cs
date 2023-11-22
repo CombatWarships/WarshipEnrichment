@@ -7,15 +7,9 @@ using WarshipImport.Managers;
 namespace WarshipEnrichment
 {
 
-	public class EnrichmentProcessor
+	public class EnrichmentProcessor:IMessageProcessor
 	{
-		private readonly IrcwccShipList _ircShipList = new IrcwccShipList();
-
-		private IEnumerable<Ship> GetShipList()
-		{
-			_ircShipList = new IrcwccShipList();
-
-		}
+		public EnrichmentProcessor() { }
 
 		public async Task ProcessMessage(string message)
 		{
@@ -32,7 +26,7 @@ namespace WarshipEnrichment
 
 				if(shipIdentity.ShiplistKey != null) 
 				{
-				var ircShip = 
+				//var ircShip = 
 				}
 
 
