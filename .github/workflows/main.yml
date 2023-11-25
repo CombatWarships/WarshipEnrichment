@@ -1,0 +1,13 @@
+name: API Build & Deploy
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths: ['WarshipEnrichmentAPI/**']
+
+jobs:
+  Build: 
+    uses: CombatWarships/DevOps/.github/workflows/Nuget.yml@main
+    with:
+      CSPROJ_PATH: WarshipEnrichmentAPI/WarshipEnrichmentAPI.csproj
+      RELEASE_DIR: WarshipEnrichmentAPI/bin/Release/
