@@ -6,6 +6,7 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["WarshipEnrichment/WarshipEnrichment.csproj", "WarshipEnrichment/"]
+RUN dotnet nuget add source "https://nuget.pkg.github.com/CombatWarships/index.json" --name WarshipPackages --username __USERNAME__ --password __TOKEN__ --store-password-in-clear-text
 RUN dotnet restore "WarshipEnrichment/WarshipEnrichment.csproj"
 COPY . .
 WORKDIR "/src/WarshipEnrichment"
