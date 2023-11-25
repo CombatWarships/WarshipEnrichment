@@ -1,0 +1,24 @@
+name: Service Build & Deploy
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths: ['WarshipEnrichment/**']
+
+jobs:
+  Build: 
+    permissions:
+      actions: read
+      contents: read
+      id-token: write  
+    uses: CombatWarships/DevOps/.github/workflows/BuildAndDeploy.yml@main
+    with:
+      CONTAINER_NAME: warshipenrichment
+      DOCKER_PATH: "./WarshipEnrichment/Dockerfile"
+    secrets: 
+      DBConnection: ${{secrets.DBCONNECTION}}
+      APP_INSIGHTS: ${{secrets.APP_INSIGHTS}}
+      AZURE_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}  
+      AZURE_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
+      AZURE_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      PACKAGE_READ: ${{secrets.PACKAGEREAD}}
