@@ -1,5 +1,5 @@
-﻿using WarshipEnrichment.Interfaces;
-using WarshipImport.Data;
+﻿using ShipDomain;
+using WarshipEnrichment.Interfaces;
 using WarshipImport.Interfaces;
 
 namespace WarshipImport.Managers
@@ -15,7 +15,7 @@ namespace WarshipImport.Managers
 			_warshipClassification = warshipClassification;
 		}
 
-		public async Task<Ship> Create(string url)
+		public async Task<Ship?> Create(string url)
 		{
 			var analyzer = new WikiDataAnalyzer(_nationalityConverter, _warshipClassification);
 

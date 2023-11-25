@@ -1,4 +1,5 @@
-﻿using WarshipImport.Data;
+﻿using ShipDomain;
+using WarshipRegistryAPI.Warships;
 
 namespace WarshipImport.Interfaces
 {

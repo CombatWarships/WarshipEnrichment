@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 using Serilog;
+using ShipDomain;
 using System.Text.Json;
 using WarshipEnrichment.Converters;
+using WarshipEnrichment.DTOs;
 using WarshipEnrichment.Interfaces;
-using WarshipImport.Data;
 using WarshipImport.Interfaces;
 
 namespace WarshipEnrichment.DataCollectors
 {
 
-	public class IrcwccShipList : IShipList
+    public class IrcwccShipList : IShipList
 	{
 		private readonly HttpClient _client = new HttpClient();
 		private readonly IWarshipClassificationConverter _warshipClassification;

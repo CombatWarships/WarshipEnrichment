@@ -136,9 +136,9 @@ namespace WarshipImport.Managers
 							{
 								Log.Warning($"This is a ship in the class, not a warship class.");
 								var classRef = row.ChildNodes[1].ChildNodes[0];
-								var classUrl = classRef.Attributes["href"].Value;
+								var classUrl = classRef.Attributes["href"]?.Value;
 
-								if (classUrl.StartsWith("/wiki/"))
+								if (classUrl?.StartsWith("/wiki/") == true)
 								{
 									classUrl = $"https://en.wikipedia.org{classUrl}";
 									parentWarshipType.Add(classUrl);

@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 using WarshipEnrichment.Interfaces;
-using WarshipRegistryAPI;
+using WarshipRegistryAPI.Classification;
 
 namespace WarshipEnrichment.Converters
 {
-	public class WarshipClassificationConverter : FlatListConverter<WarshipClassification>, IWarshipClassificationConverter
+    public class WarshipClassificationConverter : FlatListConverter<WarshipClassification>, IWarshipClassificationConverter
 	{
 		private readonly IWarshipClassificationAPI _warshipClassificationAPI;
 

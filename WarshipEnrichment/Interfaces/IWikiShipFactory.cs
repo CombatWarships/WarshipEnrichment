@@ -1,4 +1,5 @@
-﻿using WarshipImport.Data;
+﻿
+using ShipDomain;
 
 namespace WarshipImport.Interfaces
 {

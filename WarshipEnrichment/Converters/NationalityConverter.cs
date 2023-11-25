@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using WarshipEnrichment.Interfaces;
-using WarshipRegistryAPI;
+using WarshipRegistryAPI.Nationality;
 
 namespace WarshipEnrichment.Converters
 {

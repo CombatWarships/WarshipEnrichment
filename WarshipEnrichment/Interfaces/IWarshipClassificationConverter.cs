@@ -1,6 +1,4 @@
-﻿using WarshipRegistryAPI;
-
-namespace WarshipEnrichment.Interfaces
+﻿namespace WarshipEnrichment.Interfaces
 {
     public interface IWarshipClassificationConverter
     {

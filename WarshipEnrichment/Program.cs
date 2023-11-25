@@ -3,14 +3,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
+using ServiceBus.Core;
+using System.Net.NetworkInformation;
 using WarshipEnrichment;
 using WarshipEnrichment.Converters;
 using WarshipEnrichment.DataCollectors;
 using WarshipEnrichment.Interfaces;
+using WarshipEnrichmentAPI;
 using WarshipImport.Interfaces;
 using WarshipImport.Managers;
-using WarshipRegistryAPI;
-
+using WarshipRegistryAPI.Classification;
+using WarshipRegistryAPI.Nationality;
+using WarshipRegistryAPI.Warships;
 
 await Task.Delay(5000);
 
@@ -43,14 +47,26 @@ builder.ConfigureServices(services =>
 	{
 		return new NationalityAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("NationalityAPI")!);
 	});
+	services.AddSingleton<IWarshipAPI, WarshipAPI>((sp) =>
+	{
+		return new WarshipAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("WarshipAPI")!);
+	});
+	services.AddSingleton<IConflictProcessorAPI, ConflictProcessorAPI>((sp) =>
+	{
+		return new ConflictProcessorAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("WarshipConflictsServiceBus")!);
+	});
+	services.AddSingleton<IAddWarshipAPI, AddWarshipAPI>((sp) =>
+	{
+		return new AddWarshipAPI(sp.GetRequiredService<IConfiguration>().GetConnectionString("AddShipServiceBus")!);
+	});
 
 	services.AddSingleton<IShipList, IrcwccShipList>();
 	services.AddSingleton<IWikiShipFactory, WikiShipFactory>();
 	services.AddSingleton<INationalityConverter, NationalityConverter>();
 	services.AddSingleton<IWarshipClassificationConverter, WarshipClassificationConverter>();
-	services.AddScoped<IMessageProcessor, EnrichmentProcessor>();
+	services.AddSingleton<IMessageProcessor, EnrichmentProcessor>();
 
-	services.AddHostedService<ServiceBusConsumerHost>();
+	services.AddHostedService<WarshipEnrichmentConsumerHost>();
 });
 
 IHost app = builder.Build();
