@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 using ServiceBus.Core;
+using System.Diagnostics;
 using WarshipEnrichment;
 using WarshipEnrichment.Converters;
 using WarshipEnrichment.DataCollectors;
@@ -15,6 +16,9 @@ using WarshipRegistryAPI.Classification;
 using WarshipRegistryAPI.Nationality;
 using WarshipRegistryAPI.Warships;
 
+
+if (Debugger.IsAttached)
+	await Task.Delay(5000);
 
 var appInsightsConnection = "InstrumentationKey=09ce9924-198e-4315-b6c8-7885f28ec8e9;IngestionEndpoint=https://southcentralus-3.in.applicationinsights.azure.com/;LiveEndpoint=https://southcentralus.livediagnostics.monitor.azure.com/";
 

@@ -3,6 +3,7 @@ using Serilog.Context;
 using ServiceBus.Core;
 using ShipDomain;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.Json;
 using WarshipConflictsAPI;
 using WarshipEnrichment.DTOs;
@@ -45,90 +46,162 @@ namespace WarshipEnrichment
 
 				// If the ship has a pre-existing ID in CombatWarships, then take it as the basis.
 				// Await here, since we can't gaurantee order
-				var finalShip = (await _warshipAPI.GetShip(shipIdentity.ID, shipIdentity.ShiplistKey, shipIdentity.WikiLink)) ?? new Ship();
+				var tasks = new List<Task>();
 
-					// GetAccepted Conflicts
-				
+				Ship existingShip = new Ship();
 
-				List<Conflict> conflicts = new List<Conflict>();
-				List<Task> tasks = new List<Task>();
+				var t = _warshipAPI.GetShip(shipIdentity.ID, shipIdentity.ShiplistKey, shipIdentity.WikiLink)
+					.ContinueWith(res =>
+					{
+						Ship ship = res.Result;
+
+						if (ship != null)
+							existingShip = ship;
+					});
+				tasks.Add(t);
+
+				var shipData = new List<Tuple<ConflictSource, Ship>>();
 				if (shipIdentity.ShiplistKey != null)
 				{
-					var t = _shipList.FindShip(shipIdentity.ShiplistKey.Value).ContinueWith(res =>
-					{
-						Ship? ircShip = res.Result;
-
-						if (ircShip != null)
-							conflicts.AddRange(Merge(finalShip, ircShip, ConflictSource.IrcwccShipList));
-					});
+					t = _shipList.FindShip(shipIdentity.ShiplistKey.Value)
+						.ContinueWith(res =>
+						{
+							Ship? ship = res.Result;
+							if (ship != null)
+								shipData.Add(Tuple.Create(ConflictSource.IrcwccShipList, ship));
+						});
 					tasks.Add(t);
 				}
 
 				if (shipIdentity.WikiLink != null)
 				{
-					var t = _wikiShipFactory.Create(shipIdentity.WikiLink).ContinueWith(res =>
-					{
-						Ship? wikiShip = res.Result;
-
-						if (wikiShip != null)
-							conflicts.AddRange(Merge(finalShip, wikiShip, ConflictSource.Wiki));
-					});
+					t = _wikiShipFactory.Create(shipIdentity.WikiLink)
+						.ContinueWith(res =>
+						{
+							Ship? ship = res.Result;
+							if (ship != null)
+								shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
+						});
 					tasks.Add(t);
 				}
 
+				// TODO: GetAccepted Conflicts
+
+
+				// Wait until all source have been retrieved.
 				await Task.WhenAll(tasks);
 
-				// Remove any previously accepted conflicts.
-				// RemoveAcceptedConflicts();
+				var conflicts = Merge(existingShip, shipData, out bool updateFinalShipRequired);
 
-				if (!conflicts.Any())
-				{
-					// publish ship.
-					await _addWarshipAPI.PostWarship(finalShip);
-				}
-				else
+
+				if (conflicts.Any())
 				{
 					var conflictedShip = new WarshipConflict()
 					{
-						Ship = finalShip,
+						Ship = existingShip,
 						Conflicts = conflicts
 					};
 					await _conflictProcessorAPI.PostWarship(conflictedShip);
 				}
+
+				if (updateFinalShipRequired)
+				{
+					// publish ship.
+					await _addWarshipAPI.PostWarship(existingShip);
+				}
 			}
 		}
 
-		private List<Conflict> Merge(Ship finalShip, Ship enrichmentShip, ConflictSource conflictSource)
+		private List<Conflict> Merge(Ship finalShip, List<Tuple<ConflictSource, Ship>> shipData, out bool updateFinalShipRequired)
 		{
-			List<Conflict> conflicts = new List<Conflict>();
-			var properties = typeof(Ship).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+			var conflicts = new List<Conflict>();
+			bool updateFinalShip = false;
 
+			var properties = typeof(Ship).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 			lock (finalShip)
 			{
-				foreach (var property in properties)
+				foreach (PropertyInfo property in properties)
 				{
-					var existingValue = property.GetValue(finalShip);
-					var newValue = property.GetValue(enrichmentShip);
+					List<Tuple<ConflictSource, object>> newValues = GetValue(property, shipData);
 
-					if (IsDefault(newValue))
-						continue;
+					// Step 1 - Remove all values which have been overruled.
 
-					if (IsDefault(existingValue))
+					// Step 2 - Find all unique values
+					object newValue = null;
+					bool propertyConflict = false;
+					foreach (var proposedValue in newValues.Select(t => t.Item2))
 					{
-						property.SetValue(finalShip, newValue);
-						continue;
+						if (IsConflicted(newValue, proposedValue, (v) => newValue = v))
+						{
+							propertyConflict = true;
+							break;
+						}
 					}
 
-					if (newValue.Equals(existingValue))
-						continue;
+					// Step 3 - determind if we can accept it into existingValue;
+					if (!propertyConflict)
+					{
+						var existingValue = property.GetValue(finalShip);
 
-					// Otherwise, we have a conflict
-					conflicts.Add(new Conflict(property.Name, conflictSource));
+						propertyConflict = IsConflicted(existingValue, newValue,
+							(v) =>
+							{
+								updateFinalShip = true;
+								property.SetValue(finalShip, v);
+							});
+					}
+
+					// Step 4 - add it to the list of conflicts.
+					if (propertyConflict)
+					{
+						conflicts.AddRange(newValues.Select(v =>
+						{
+							var jsonValue = JsonSerializer.Serialize(v.Item2);
+							return new Conflict(v.Item1, property.Name, jsonValue);
+						}));
+					}
 				}
 			}
 
+			updateFinalShipRequired = updateFinalShip;
 			return conflicts;
 		}
+
+		private static bool IsConflicted(object? existingValue, object? newValue, Action<object> setValue)
+		{
+			if (IsDefault(newValue))
+				return false;
+
+			if (IsDefault(existingValue))
+			{
+				setValue(newValue!);
+				return false;
+			}
+
+			if (existingValue!.Equals(newValue))
+				return false;
+
+			// Otherwise, we have a conflict
+			return true;
+		}
+
+		private static List<Tuple<ConflictSource, object>> GetValue(PropertyInfo propertyInfo, List<Tuple<ConflictSource, Ship>> shipData)
+		{
+			var values = new List<Tuple<ConflictSource, object>>();
+			foreach (var kvp in shipData)
+			{
+				var conflictSource = kvp.Item1;
+				var ship = kvp.Item2;
+				var value = propertyInfo.GetValue(ship);
+
+				if (!IsDefault(value))
+				{
+					values.Add(Tuple.Create(conflictSource, value!));
+				}
+			}
+			return values;
+		}
+
 
 		private static bool IsDefault(object? value)
 		{
