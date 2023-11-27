@@ -166,6 +166,9 @@ namespace WarshipImport.Managers
 
 				foreach (var parentUrl in parentWarshipType)
 				{
+					if (string.Equals(parentUrl, url, StringComparison.OrdinalIgnoreCase))
+						continue;
+
 					var parentData = await Extract(parentUrl);
 
 					foreach (var kvp in parentData)
