@@ -27,7 +27,7 @@ if (string.IsNullOrEmpty(appInsightsConnection))
 
 Log.Logger = new LoggerConfiguration()
 	.Enrich.FromLogContext()
-	.Enrich.WithProperty("ApplicationName", "WarshipImport")
+	.Enrich.WithProperty("ApplicationName", typeof(Program).Assembly.GetName().Name)
 	.WriteTo.ApplicationInsights(appInsightsConnection, new TraceTelemetryConverter())
 	.WriteTo.Console()
 	.CreateLogger();
