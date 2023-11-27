@@ -16,7 +16,6 @@ using WarshipRegistryAPI.Classification;
 using WarshipRegistryAPI.Nationality;
 using WarshipRegistryAPI.Warships;
 
-
 if (Debugger.IsAttached)
 	await Task.Delay(5000);
 
@@ -33,7 +32,6 @@ Log.Logger = new LoggerConfiguration()
 	.CreateLogger();
 
 Log.Information("Application started & Logger attached");
-
 
 var builder = Host.CreateDefaultBuilder();
 

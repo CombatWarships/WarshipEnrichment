@@ -21,6 +21,7 @@ namespace WarshipEnrichment
 		private readonly IWikiShipFactory _wikiShipFactory;
 		private readonly IConflictProcessorAPI _conflictProcessorAPI;
 		private readonly IAddWarshipAPI _addWarshipAPI;
+		private readonly TimeSpan _timeout = new TimeSpan(0, 0, 10);
 
 		public EnrichmentProcessor(IWarshipAPI warshipAPI, IShipList shipList, IWikiShipFactory wikiShipFactory, IConflictProcessorAPI conflictProcessorAPI, IAddWarshipAPI addWarshipAPI)
 		{
@@ -79,7 +80,7 @@ namespace WarshipEnrichment
 							if (ship != null)
 								existingShip = ship;
 						});
-					tasks.Add(t);
+					tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
 
 					var shipData = new List<Tuple<ConflictSource, Ship>>();
 					if (shipIdentity.ShiplistKey != null)
@@ -95,7 +96,7 @@ namespace WarshipEnrichment
 								if (ship != null)
 									shipData.Add(Tuple.Create(ConflictSource.IrcwccShipList, ship));
 							});
-						tasks.Add(t);
+						tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
 					}
 
 					if (shipIdentity.WikiLink != null)
@@ -111,11 +112,10 @@ namespace WarshipEnrichment
 								if (ship != null)
 									shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
 							});
-						tasks.Add(t);
+						tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
 					}
 
 					// TODO: GetAccepted Conflicts
-
 
 					// Wait until all source have been retrieved.
 					await Task.WhenAll(tasks);
@@ -139,6 +139,10 @@ namespace WarshipEnrichment
 
 					if (updateFinalShipRequired)
 					{
+						if (existingShip.ClassName == null)
+						{ 
+						}
+
 						Log.Information($"Posting ship to Warship API");
 						// publish ship.
 						await _addWarshipAPI.PostWarship(existingShip);
