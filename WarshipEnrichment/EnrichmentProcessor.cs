@@ -33,21 +33,35 @@ namespace WarshipEnrichment
 
 		public async Task ProcessMessage(string message)
 		{
+			ShipIdentity? shipIdentity;
 			using (LogContext.PushProperty("MessageJSON", message))
 			{
-				var shipIdentity = JsonSerializer.Deserialize<ShipIdentity>(message);
-
-				if (shipIdentity == null)
+				try
 				{
-					Log.Error("ShipIdentity was null");
+					Log.Information("Enrichment process started.");
+
+					shipIdentity = JsonSerializer.Deserialize<ShipIdentity>(message);
+
+					if (shipIdentity == null)
+					{
+						Log.Error("ShipIdentity was null");
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.Error(ex, "Exception during deserialization");
 					return;
 				}
+			}
 
-				using (LogContext.PushProperty("ID", shipIdentity.ID))
-				using (LogContext.PushProperty("ShiplistKey", shipIdentity.ShiplistKey))
-				using (LogContext.PushProperty("WikiLink", shipIdentity.WikiLink))
+			using (LogContext.PushProperty("ID", shipIdentity.ID))
+			using (LogContext.PushProperty("ShiplistKey", shipIdentity.ShiplistKey))
+			using (LogContext.PushProperty("WikiLink", shipIdentity.WikiLink))
+			{
+				try
 				{
-					Log.Information("Deserialized to Ship Identity");
+					Log.Information("Enriching Ship");
 
 					// If the ship has a pre-existing ID in CombatWarships, then take it as the basis.
 					// Await here, since we can't gaurantee order
@@ -70,6 +84,7 @@ namespace WarshipEnrichment
 					var shipData = new List<Tuple<ConflictSource, Ship>>();
 					if (shipIdentity.ShiplistKey != null)
 					{
+						Log.Information($"IRCWCC Ship list key exists");
 						t = _shipList.FindShip(shipIdentity.ShiplistKey.Value)
 							.ContinueWith(res =>
 							{
@@ -85,6 +100,7 @@ namespace WarshipEnrichment
 
 					if (shipIdentity.WikiLink != null)
 					{
+						Log.Information($"WIKI URL exists");
 						t = _wikiShipFactory.Create(shipIdentity.WikiLink)
 							.ContinueWith(res =>
 							{
@@ -103,6 +119,8 @@ namespace WarshipEnrichment
 
 					// Wait until all source have been retrieved.
 					await Task.WhenAll(tasks);
+
+					Log.Information($"All data sources complete, starting merge.");
 
 					var conflicts = Merge(existingShip, shipData, out bool updateFinalShipRequired);
 
@@ -125,6 +143,10 @@ namespace WarshipEnrichment
 						// publish ship.
 						await _addWarshipAPI.PostWarship(existingShip);
 					}
+				}
+				catch (Exception ex)
+				{
+					Log.Error(ex, "Unexpected Exception during Enrichment");
 				}
 			}
 		}
