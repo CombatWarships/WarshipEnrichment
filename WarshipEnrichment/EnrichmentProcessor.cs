@@ -42,72 +42,89 @@ namespace WarshipEnrichment
 					Log.Error("ShipIdentity was null");
 					return;
 				}
-				Log.Information("Deserialized to Ship Identity");
 
-				// If the ship has a pre-existing ID in CombatWarships, then take it as the basis.
-				// Await here, since we can't gaurantee order
-				var tasks = new List<Task>();
-
-				Ship existingShip = new Ship();
-
-				var t = _warshipAPI.GetShip(shipIdentity.ID, shipIdentity.ShiplistKey, shipIdentity.WikiLink)
-					.ContinueWith(res =>
-					{
-						Ship ship = res.Result;
-
-						if (ship != null)
-							existingShip = ship;
-					});
-				tasks.Add(t);
-
-				var shipData = new List<Tuple<ConflictSource, Ship>>();
-				if (shipIdentity.ShiplistKey != null)
+				using (LogContext.PushProperty("ID", shipIdentity.ID))
+				using (LogContext.PushProperty("ShiplistKey", shipIdentity.ShiplistKey))
+				using (LogContext.PushProperty("WikiLink", shipIdentity.WikiLink))
 				{
-					t = _shipList.FindShip(shipIdentity.ShiplistKey.Value)
+					Log.Information("Deserialized to Ship Identity");
+
+					// If the ship has a pre-existing ID in CombatWarships, then take it as the basis.
+					// Await here, since we can't gaurantee order
+					var tasks = new List<Task>();
+
+					Ship existingShip = new Ship();
+
+					var t = _warshipAPI.GetShip(shipIdentity.ID, shipIdentity.ShiplistKey, shipIdentity.WikiLink)
 						.ContinueWith(res =>
 						{
-							Ship? ship = res.Result;
+							Ship ship = res.Result;
+
+							Log.Information($"Existing ship existed: {ship != null}");
+
 							if (ship != null)
-								shipData.Add(Tuple.Create(ConflictSource.IrcwccShipList, ship));
+								existingShip = ship;
 						});
 					tasks.Add(t);
-				}
 
-				if (shipIdentity.WikiLink != null)
-				{
-					t = _wikiShipFactory.Create(shipIdentity.WikiLink)
-						.ContinueWith(res =>
-						{
-							Ship? ship = res.Result;
-							if (ship != null)
-								shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
-						});
-					tasks.Add(t);
-				}
-
-				// TODO: GetAccepted Conflicts
-
-
-				// Wait until all source have been retrieved.
-				await Task.WhenAll(tasks);
-
-				var conflicts = Merge(existingShip, shipData, out bool updateFinalShipRequired);
-
-
-				if (conflicts.Any())
-				{
-					var conflictedShip = new WarshipConflict()
+					var shipData = new List<Tuple<ConflictSource, Ship>>();
+					if (shipIdentity.ShiplistKey != null)
 					{
-						Ship = existingShip,
-						Conflicts = conflicts
-					};
-					await _conflictProcessorAPI.PostWarship(conflictedShip);
-				}
+						t = _shipList.FindShip(shipIdentity.ShiplistKey.Value)
+							.ContinueWith(res =>
+							{
+								Ship? ship = res.Result;
 
-				if (updateFinalShipRequired)
-				{
-					// publish ship.
-					await _addWarshipAPI.PostWarship(existingShip);
+								Log.Information($"IRCWCC ship existed: {ship != null}");
+
+								if (ship != null)
+									shipData.Add(Tuple.Create(ConflictSource.IrcwccShipList, ship));
+							});
+						tasks.Add(t);
+					}
+
+					if (shipIdentity.WikiLink != null)
+					{
+						t = _wikiShipFactory.Create(shipIdentity.WikiLink)
+							.ContinueWith(res =>
+							{
+								Ship? ship = res.Result;
+
+								Log.Information($"WIKI ship existed: {ship != null}");
+
+								if (ship != null)
+									shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
+							});
+						tasks.Add(t);
+					}
+
+					// TODO: GetAccepted Conflicts
+
+
+					// Wait until all source have been retrieved.
+					await Task.WhenAll(tasks);
+
+					var conflicts = Merge(existingShip, shipData, out bool updateFinalShipRequired);
+
+					Log.Information($"Merge complete, {conflicts.Count} merge conflicts identified");
+
+
+					if (conflicts.Any())
+					{
+						var conflictedShip = new WarshipConflict()
+						{
+							Ship = existingShip,
+							Conflicts = conflicts
+						};
+						await _conflictProcessorAPI.PostWarship(conflictedShip);
+					}
+
+					if (updateFinalShipRequired)
+					{
+						Log.Information($"Posting ship to Warship API");
+						// publish ship.
+						await _addWarshipAPI.PostWarship(existingShip);
+					}
 				}
 			}
 		}
