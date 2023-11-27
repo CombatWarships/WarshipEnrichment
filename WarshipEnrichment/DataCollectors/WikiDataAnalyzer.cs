@@ -28,9 +28,10 @@ namespace WarshipImport.Managers
 		{
 			try
 			{
+				Log.Information($"Loading WikiDataAnalyzer {url}");
 				Url = url;
 
-				_data = await Extract(url);
+				_data = await Extract(url, 0);
 
 				bool isValid = await ProcessShip();
 
@@ -44,17 +45,17 @@ namespace WarshipImport.Managers
 			}
 		}
 
-		private static async Task<Dictionary<string, string[]>> Extract(string url)
+		private static async Task<Dictionary<string, string[]>> Extract(string url, int recursiveDepth)
 		{
-			List<string> parentWarshipType = new List<string>();
-
 			Dictionary<string, string[]> data = new Dictionary<string, string[]>();
-			Log.Information($"Loading WikiDataAnalyzer {url}");
-
-			data.Clear();
-
+			
 			if (string.IsNullOrEmpty(url))
 				return data;
+
+			if (recursiveDepth > 5)
+				return data;
+
+			List<string> parentWarshipType = new List<string>();
 
 			HtmlWeb web = new HtmlWeb();
 			HtmlDocument htmlDoc = await web.LoadFromWebAsync(url);
@@ -169,7 +170,7 @@ namespace WarshipImport.Managers
 					if (string.Equals(parentUrl, url, StringComparison.OrdinalIgnoreCase))
 						continue;
 
-					var parentData = await Extract(parentUrl);
+					var parentData = await Extract(parentUrl, recursiveDepth + 1);
 
 					foreach (var kvp in parentData)
 					{
