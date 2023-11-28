@@ -15,10 +15,4 @@ jobs:
     with:
       CONTAINER_NAME: warshipenrichment
       DOCKER_PATH: "./WarshipEnrichment/Dockerfile"
-    secrets: 
-      DBConnection: ${{secrets.DBCONNECTION}}
-      APP_INSIGHTS: ${{secrets.APP_INSIGHTS}}
-      AZURE_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}  
-      AZURE_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
-      AZURE_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
-      PACKAGE_READ: ${{secrets.PACKAGEREAD}}
+    secrets: inherit
