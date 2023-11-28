@@ -6,7 +6,7 @@ namespace WarshipEnrichment
 	public class WarshipEnrichmentConsumerHost : ServiceBusConsumerHost
 	{
 		public WarshipEnrichmentConsumerHost(IConfiguration configuration, IMessageProcessor messageProcessor)
-			: base(configuration.GetConnectionString("EnrichmentServiceBus"), "warshipenrichment", messageProcessor)
+			: base(configuration["EnrichmentServiceBus"], "warshipenrichment", messageProcessor)
 		{
 		}
 	}
