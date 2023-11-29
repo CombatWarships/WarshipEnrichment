@@ -99,21 +99,21 @@ namespace WarshipEnrichment
 						tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
 					}
 
-					if (shipIdentity.WikiLink != null)
-					{
-						Log.Information($"WIKI URL exists");
-						t = _wikiShipFactory.Create(shipIdentity.WikiLink)
-							.ContinueWith(res =>
-							{
-								Ship? ship = res.Result;
+					//if (shipIdentity.WikiLink != null)
+					//{
+					//	Log.Information($"WIKI URL exists");
+					//	t = _wikiShipFactory.Create(shipIdentity.WikiLink)
+					//		.ContinueWith(res =>
+					//		{
+					//			Ship? ship = res.Result;
 
-								Log.Information($"WIKI ship existed: {ship != null}");
+					//			Log.Information($"WIKI ship existed: {ship != null}");
 
-								if (ship != null)
-									shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
-							});
-						tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
-					}
+					//			if (ship != null)
+					//				shipData.Add(Tuple.Create(ConflictSource.Wiki, ship));
+					//		});
+					//	tasks.Add(Task.WhenAny(t, Task.Delay(_timeout)));
+					//}
 
 					// TODO: GetAccepted Conflicts
 
